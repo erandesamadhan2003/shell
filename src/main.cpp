@@ -1,14 +1,18 @@
 #include <iostream>
 #include <string>
-using namespace std;
+// using namespace std;
 int main() {
-  cout << unitbuf;
-  cerr << unitbuf;
+  std::cout << std::unitbuf;
+  std::cerr << std::unitbuf;
 
-  cout << "$ ";
+  while (true) {
+    std::cout << "$ ";
+    
+    std::string input;
+    getline(std::cin, input);
+    
+    std::cout << input << ": command not found" << std::endl;
+  }
 
-  string input;
-  getline(cin, input);
-
-  cout << input << ": command not found" << endl;
+  return 0;
 }
