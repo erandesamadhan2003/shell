@@ -1,26 +1,40 @@
 #include <iostream>
 #include <string>
-// using namespace std;
+#include "./command/command_utils.h"
+
 int main() {
-  std::cout << std::unitbuf;
-  std::cerr << std::unitbuf;
+    std::cout << std::unitbuf;
+    std::cerr << std::unitbuf;
 
-  while (true) {
-    std::cout << "$ ";
+    while (true) {
+        std::cout << "$ ";
+            std::string input, arg;
+            std::getline(std::cin, input);
 
-    std::string input;
-    getline(std::cin, input);
+            CommandType cmd = getCommandType(input, arg);
 
-    if (input == "exit 0") return 0;
-    
-    if (input.find("echo") != std::string::npos) {
-      std::string echo = "echo ";
-      std::cout << input.substr(echo.length()) << std::endl;
-    } else {
-      std::cout << input << ": command not found" << std::endl;
+            switch (cmd) {
+                case CMD_ECHO:
+                    std::cout << arg << std::endl;
+                    break;
+            
+                case CMD_TYPE:
+                    if (arg == "echo" || arg == "type" || arg == "exit") {
+                        std::cout << arg << " is a shell builtin" << std::endl;
+                    } else {
+                        std::cout << arg << " not found" << std::endl;
+                    }
+                    break;
+                  
+                case CMD_EXIT:
+                    return 0;
+                  
+                case CMD_UNKNOWN:
+                default:
+                    std::cout << input << ": command not found" << std::endl;
+                    break;
+          }
     }
 
-  }
-
-  return 0;
+    return 0;
 }
