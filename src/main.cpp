@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "./command/command_utils.h"
+#include "./helper/helper_utils.h"
 
 int main() {
     std::cout << std::unitbuf;
@@ -22,7 +22,13 @@ int main() {
                     if (arg == "echo" || arg == "type" || arg == "exit") {
                         std::cout << arg << " is a shell builtin" << std::endl;
                     } else {
-                        std::cout << arg << " not found" << std::endl;
+                        // search in path for the command
+                        std::string path_found = findInPath(arg);
+                        if(!path_found.empty()) {
+                            std::cout << arg << " is " << path_found << std::endl;
+                        } else {
+                            std::cout << arg << " not found" << std::endl;
+                        }
                     }
                     break;
                   
