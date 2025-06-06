@@ -31,6 +31,10 @@ int main() {
             case CMD_PWD:
                 executePwd();
                 break;
+            
+            case CMD_CD:
+                executeCd(arg);
+                break;
               
             case CMD_UNKNOWN:
                 default:

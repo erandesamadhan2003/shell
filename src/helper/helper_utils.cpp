@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iostream>
 
 std::string removeExtraSpaces(std::string s) {
     size_t start = s.find_first_not_of(" \t");
@@ -25,6 +26,16 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
 
     if(trimmed == "pwd") {
         return CMD_PWD;
+    }
+
+    if(trimmed.rfind("cd ", 0) == 0) {
+        arg = removeExtraSpaces(trimmed.substr(3));
+        return CMD_CD;
+    }
+
+    if(trimmed == "cd") {
+        arg = "";
+        return CMD_CD;
     }
 
     return CMD_UNKNOWN;

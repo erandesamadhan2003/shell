@@ -9,4 +9,5 @@ void executeEcho(const std::string& arg);
 void executeType(const std::string& arg);
 void executeUnknownCommand(const std::string& input);
 void executePwd();
+void executeCd(const std::string& arg);
 #endif

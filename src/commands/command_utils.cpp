@@ -70,3 +70,33 @@ void executePwd() {
     std::filesystem::path currentPath = std::filesystem::current_path();
     std::cout << currentPath.string() << std::endl;
 }
+
+void executeCd(const std::string& arg) {
+    if (arg.empty()) {
+        std::cout << "cd: missing argument" << std::endl;
+        return;
+    }
+
+    std::error_code ec;
+    std::filesystem::path newPath = std::filesystem::absolute(arg, ec);
+
+    if (ec) {
+        std::cout << "cd: " << ec.message() << std::endl;
+        return;
+    }
+
+    if (!std::filesystem::exists(newPath, ec)) {
+        std::cout << "cd: " << newPath.string() << ": No such file or directory" << std::endl;
+        return;
+    }
+
+    if (!std::filesystem::is_directory(newPath, ec)) {
+        std::cout << "cd: not a directory: " << newPath.string() << std::endl;
+        return;
+    }
+
+    std::filesystem::current_path(newPath, ec);
+    if (ec) {
+        std::cout << "cd: " << ec.message() << std::endl;
+    }
+}
