@@ -12,7 +12,7 @@ void executeEcho(const std::string& arg) {
 }
 
 void executeType(const std::string& arg) {
-    if (arg == "echo" || arg == "type" || arg == "exit") {
+    if (arg == "echo" || arg == "type" || arg == "exit" || arg == "pwd") {
         std::cout << arg << " is a shell builtin" << std::endl;
     } else {
         // search in path for the command
@@ -60,13 +60,9 @@ void executeUnknownCommand(const std::string& input) {
     } else if (pid == 0) {
         execv(cmdPath.c_str(), argv.data());
         perror("execv failed");
-        exit(EXIT_FAILURE);
+        exit(1);
     } else {
-        int status;
-        waitpid(pid, &status, 0);
-        if (WIFEXITED(status)) {
-            std::cout << "Command exited with status: " << WEXITSTATUS(status) << std::endl;
-        }
+        wait(nullptr); // wait for the child process to finish
     }
 }
 
