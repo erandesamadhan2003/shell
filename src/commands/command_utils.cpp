@@ -8,7 +8,17 @@
 #include <sstream>
 
 void executeEcho(const std::string& arg) {
-    std::cout << arg << std::endl;
+    // handle single quotes
+    std::string trimmed_arg = removeExtraSpaces(arg);
+    if (trimmed_arg.empty()) {
+        std::cout << std::endl; 
+        return;
+    }
+    if (trimmed_arg.front() == '\'' && trimmed_arg.back() == '\'') {
+        trimmed_arg = trimmed_arg.substr(1, trimmed_arg.size() - 2);
+    }
+
+    std::cout << trimmed_arg << std::endl;
 }
 
 void executeType(const std::string& arg) {
