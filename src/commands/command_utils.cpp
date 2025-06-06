@@ -77,6 +77,19 @@ void executeCd(const std::string& arg) {
         return;
     }
 
+    // If the argument is "~", change to home directory
+    if (arg == "~") {
+        const char* home = getenv("HOME");
+        if (home) {
+            std::filesystem::path homePath(home);
+            std::filesystem::current_path(homePath);
+            return;
+        } else {
+            std::cout << "cd: HOME not set" << std::endl;
+            return;
+        }
+    }
+
     std::error_code ec;
     std::filesystem::path newPath = std::filesystem::absolute(arg, ec);
 
