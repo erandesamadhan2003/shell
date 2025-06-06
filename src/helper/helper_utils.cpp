@@ -23,6 +23,10 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
         return CMD_TYPE;
     }
 
+    if(trimmed == "pwd") {
+        return CMD_PWD;
+    }
+
     return CMD_UNKNOWN;
 }
 

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
-enum CommandType{ CMD_ECHO, CMD_TYPE, CMD_EXIT, CMD_UNKNOWN };
+enum CommandType{ CMD_ECHO, CMD_TYPE, CMD_EXIT, CMD_UNKNOWN, CMD_PWD };
 
 // remove the extra spaces in the input at start of the string
 std::string removeExtraSpaces(std::string s);
