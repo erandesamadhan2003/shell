@@ -38,6 +38,11 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
         return CMD_CD;
     }
 
+    if(trimmed.rfind("cat ", 0) == 0) {
+        arg = removeExtraSpaces(trimmed.substr(4));
+        return CMD_CAT;
+    }
+
     return CMD_UNKNOWN;
 }
 
