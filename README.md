@@ -1,4 +1,3 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/9bd5fa86-f195-4e01-bc0e-fef0132aa32b)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
 This is a starting point for C++ solutions to the
 ["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
