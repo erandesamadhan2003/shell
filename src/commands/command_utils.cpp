@@ -6,19 +6,69 @@
 #include <filesystem>
 #include <string>
 #include <sstream>
+#include <fstream>
+#include <vector>
+
+#include <sstream>
+#include <fstream>
+#include <iostream>
+#include <vector>
+
+std::vector<std::string> parseArgs(const std::string& input) {
+    std::vector<std::string> args;
+    std::string arg;
+    bool in_single_quote = false;
+    bool in_double_quote = false;
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        char c = input[i];
+
+        if (c == '\'' && !in_double_quote) {
+            in_single_quote = !in_single_quote;
+            continue;
+        }
+
+        if (c == '"' && !in_single_quote) {
+            in_double_quote = !in_double_quote;
+            continue;
+        }
+
+        if (c == ' ' && !in_single_quote && !in_double_quote) {
+            // Skip multiple spaces
+            while (i + 1 < input.size() && input[i + 1] == ' ') {
+                ++i;
+            }
+            if (!arg.empty()) {
+                args.push_back(arg);
+                arg.clear();
+            }
+        } else {
+            arg += c;
+        }
+    }
+
+    if (!arg.empty()) {
+        args.push_back(arg);
+    }
+
+    return args;
+}
+
 
 void executeEcho(const std::string& arg) {
-    // handle single quotes
     std::string trimmed_arg = removeExtraSpaces(arg);
     if (trimmed_arg.empty()) {
-        std::cout << std::endl; 
+        std::cout << std::endl;
         return;
     }
-    if (trimmed_arg.front() == '\'' && trimmed_arg.back() == '\'') {
-        trimmed_arg = trimmed_arg.substr(1, trimmed_arg.size() - 2);
+
+    std::vector<std::string> tokens = parseArgs(trimmed_arg);
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        std::cout << tokens[i];
+        if (i != tokens.size() - 1) std::cout << " ";
     }
 
-    std::cout << trimmed_arg << std::endl;
+    std::cout << std::endl;
 }
 
 void executeType(const std::string& arg) {
@@ -36,13 +86,7 @@ void executeType(const std::string& arg) {
 }
 
 void executeUnknownCommand(const std::string& input) {
-    std::istringstream iss(input);
-    std::vector<std::string> tokens;
-    std::string token;
-
-    while (iss >> token) {
-        tokens.push_back(token);
-    }
+    std::vector<std::string> tokens = parseArgs(input);
 
     if (tokens.empty()) return;
 
@@ -87,7 +131,7 @@ void executeCd(const std::string& arg) {
         return;
     }
 
-    // If the argument is "~", change to home directory
+    // If the argument is "~", change to home directory 
     if (arg == "~") {
         const char* home = getenv("HOME");
         if (home) {
@@ -122,4 +166,22 @@ void executeCd(const std::string& arg) {
     if (ec) {
         std::cout << "cd: " << ec.message() << std::endl;
     }
+}
+
+void executeCat(const std::string& arg) {
+    std::vector<std::string> files = parseArgs(arg);
+
+    for (const auto& filename : files) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            std::cout << "cat: " << filename << ": No such file or directory" << std::endl;
+            continue;
+        }
+
+        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        std::cout << content;
+        file.close();
+    }
+
+    std::cout << std::endl;
 }
