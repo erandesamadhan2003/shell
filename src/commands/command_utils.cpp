@@ -116,7 +116,7 @@ void executeUnknownCommand(const std::string& input) {
         perror("execv failed");
         exit(1);
     } else {
-        wait(nullptr); // wait for the child process to finish
+        wait(nullptr); 
     }
 }
 
