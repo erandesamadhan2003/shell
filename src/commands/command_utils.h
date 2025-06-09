@@ -10,4 +10,5 @@ void executeType(const std::string& arg);
 void executeUnknownCommand(const std::string& input);
 void executePwd();
 void executeCd(const std::string& arg);
+void executeCat(const std::string& arg);
 #endif
