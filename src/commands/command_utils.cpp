@@ -54,7 +54,6 @@ std::vector<std::string> parseArgs(const std::string& input) {
     return args;
 }
 
-
 void executeEcho(const std::string& arg) {
     std::string trimmed_arg = removeExtraSpaces(arg);
     if (trimmed_arg.empty()) {
@@ -182,6 +181,5 @@ void executeCat(const std::string& arg) {
         std::cout << content;
         file.close();
     }
-
     std::cout << std::endl;
 }
