@@ -19,9 +19,34 @@ std::vector<std::string> parseArgs(const std::string& input) {
     std::string arg;
     bool in_single_quote = false;
     bool in_double_quote = false;
+    bool escape_next = false;
 
-    for (size_t i = 0; i < input.size(); ++i) {
+    for (size_t i = 0; i < input.length(); ++i) {
         char c = input[i];
+
+        if (escape_next) {
+            if (in_double_quote) {
+                if (c == '"' || c == '\\') {
+                    arg += c;  
+                } else {
+                    arg += '\\';  
+                    arg += c;
+                }
+            } else {
+                arg += c;
+            }
+            escape_next = false;
+            continue;
+        }
+
+        if (c == '\\') {
+            if (in_single_quote) {
+                arg += '\\';  
+            } else {
+                escape_next = true;
+            }
+            continue;
+        }
 
         if (c == '\'' && !in_double_quote) {
             in_single_quote = !in_single_quote;
@@ -34,17 +59,14 @@ std::vector<std::string> parseArgs(const std::string& input) {
         }
 
         if (c == ' ' && !in_single_quote && !in_double_quote) {
-            // Skip multiple spaces
-            while (i + 1 < input.size() && input[i + 1] == ' ') {
-                ++i;
-            }
             if (!arg.empty()) {
                 args.push_back(arg);
                 arg.clear();
             }
-        } else {
-            arg += c;
+            continue;
         }
+
+        arg += c;
     }
 
     if (!arg.empty()) {
@@ -53,6 +75,7 @@ std::vector<std::string> parseArgs(const std::string& input) {
 
     return args;
 }
+
 
 void executeEcho(const std::string& arg) {
     std::string trimmed_arg = removeExtraSpaces(arg);
