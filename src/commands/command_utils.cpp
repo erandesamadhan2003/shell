@@ -8,7 +8,6 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
-
 #include <sstream>
 #include <fstream>
 #include <iostream>
@@ -59,6 +58,10 @@ std::vector<std::string> parseArgs(const std::string& input) {
         }
 
         if (c == ' ' && !in_single_quote && !in_double_quote) {
+            // Skip multiple spaces
+            while (i + 1 < input.size() && input[i + 1] == ' ') {
+                ++i;
+            }
             if (!arg.empty()) {
                 args.push_back(arg);
                 arg.clear();
@@ -204,5 +207,6 @@ void executeCat(const std::string& arg) {
         std::cout << content;
         file.close();
     }
+
     std::cout << std::endl;
 }
