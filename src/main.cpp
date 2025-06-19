@@ -35,7 +35,15 @@ int main() {
             case CMD_CD:
                 executeCd(arg);
                 break;
-              
+            
+            case CMD_CAT:
+                executeCat(arg);
+                break;
+            
+            case CMD_LS:
+                executeLs(arg);
+                break;
+                
             case CMD_UNKNOWN:
                 default:
                 executeUnknownCommand(input);

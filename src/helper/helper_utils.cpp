@@ -1,9 +1,9 @@
+#include <iostream>
 #include "helper_utils.h"
-
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <sstream>
-#include <iostream>
 
 std::string removeExtraSpaces(std::string s) {
     size_t start = s.find_first_not_of(" \t");
@@ -12,7 +12,10 @@ std::string removeExtraSpaces(std::string s) {
 
 CommandType getCommandType(const std::string& input, std::string& arg) {
     std::string trimmed = removeExtraSpaces(input);
-    if (trimmed == "exit 0") return CMD_EXIT;
+    if (trimmed == "exit 0") {
+        arg = "";
+        return CMD_EXIT;
+    }
 
     if (trimmed.rfind("echo ", 0) == 0) {
         arg = trimmed.substr(5); 
@@ -25,6 +28,7 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
     }
 
     if(trimmed == "pwd") {
+        arg = "";
         return CMD_PWD;
     }
 
@@ -43,6 +47,11 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
         return CMD_CAT;
     }
 
+    if(trimmed.rfind("ls ", 0) == 0) {
+        arg = removeExtraSpaces(trimmed.substr(3));
+        return CMD_LS;
+    }
+
     return CMD_UNKNOWN;
 }
 
@@ -52,6 +61,7 @@ std::vector<std::string> split(const std::string& s, char delim) {
     std::string item;
     
     while(getline(ss, item, delim)) {
+        item = removeExtraSpaces(item); 
         directories.push_back(item);
     }
     return directories;
