@@ -86,23 +86,97 @@ void executeEcho(const std::string& arg) {
         return;
     }
 
-    // Check for output redirection (both > and 1>)
-    size_t redirect_pos = std::string::npos;
-    std::string redirect_symbol;
+    // Check for output redirection (> and 1> for stdout, 2> for stderr)
+    size_t stdout_redirect_pos = std::string::npos;
+    size_t stderr_redirect_pos = std::string::npos;
+    std::string stdout_redirect_symbol;
+    std::string stderr_redirect_symbol;
     
-    // Check for "1>" first, then ">"
-    if (trimmed_arg.find("1>") != std::string::npos) {
-        redirect_pos = trimmed_arg.find("1>");
-        redirect_symbol = "1>";
-    } else if (trimmed_arg.find(">") != std::string::npos) {
-        redirect_pos = trimmed_arg.find(">");
-        redirect_symbol = ">";
+    // Check for stdout redirection (> and 1>)
+    std::vector<std::pair<std::string, size_t>> stdout_redirects = {
+        {" 1> ", trimmed_arg.find(" 1> ")},
+        {"1> ", trimmed_arg.find("1> ")},
+        {" 1>", trimmed_arg.find(" 1>")},
+        {"1>", trimmed_arg.find("1>")},
+        {" > ", trimmed_arg.find(" > ")},
+        {"> ", trimmed_arg.find("> ")},
+        {" >", trimmed_arg.find(" >")},
+        {">", trimmed_arg.find(">")}
+    };
+    
+    // Check for stderr redirection (2>)
+    std::vector<std::pair<std::string, size_t>> stderr_redirects = {
+        {" 2> ", trimmed_arg.find(" 2> ")},
+        {"2> ", trimmed_arg.find("2> ")},
+        {" 2>", trimmed_arg.find(" 2>")},
+        {"2>", trimmed_arg.find("2>")}
+    };
+    
+    // Find stdout redirections
+    for (const auto& [symbol, pos] : stdout_redirects) {
+        if (pos != std::string::npos && (stdout_redirect_pos == std::string::npos || pos < stdout_redirect_pos)) {
+            stdout_redirect_pos = pos;
+            stdout_redirect_symbol = symbol;
+        }
     }
     
-    if (redirect_pos != std::string::npos) {
-        // Handle output redirection
-        std::string input_part = trimmed_arg.substr(0, redirect_pos);
-        std::string output_part = trimmed_arg.substr(redirect_pos + redirect_symbol.length());
+    // Find stderr redirections
+    for (const auto& [symbol, pos] : stderr_redirects) {
+        if (pos != std::string::npos && (stderr_redirect_pos == std::string::npos || pos < stderr_redirect_pos)) {
+            stderr_redirect_pos = pos;
+            stderr_redirect_symbol = symbol;
+        }
+    }
+    
+    // Handle stderr redirection (2>) - for echo, this should just create an empty file
+    if (stderr_redirect_pos != std::string::npos && 
+        (stdout_redirect_pos == std::string::npos || stderr_redirect_pos < stdout_redirect_pos)) {
+        
+        // Extract the stderr output file
+        std::string input_part = trimmed_arg.substr(0, stderr_redirect_pos);
+        std::string stderr_output_part = trimmed_arg.substr(stderr_redirect_pos + stderr_redirect_symbol.length());
+        
+        input_part = removeExtraSpaces(input_part);
+        stderr_output_part = removeExtraSpaces(stderr_output_part);
+        
+        if (stderr_output_part.empty()) {
+            std::cout << "echo: missing output file" << std::endl;
+            return;
+        }
+        
+        // Create empty stderr redirect file
+        namespace fs = std::filesystem;
+        fs::path stderr_outFile;
+        
+        if (fs::path(stderr_output_part).is_absolute()) {
+            stderr_outFile = stderr_output_part;
+        } else {
+            stderr_outFile = fs::current_path() / stderr_output_part;
+        }
+        
+        fs::create_directories(stderr_outFile.parent_path());
+        
+        std::ofstream stderr_file(stderr_outFile);
+        if (!stderr_file) {
+            std::cerr << "echo: Failed to open file " << stderr_output_part << " for writing\n";
+            return;
+        }
+        stderr_file.close(); // Create empty file
+        
+        // Continue with normal echo output to stdout using the remaining input
+        std::vector<std::string> tokens = parseArgs(input_part);
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            std::cout << tokens[i];
+            if (i != tokens.size() - 1) std::cout << " ";
+        }
+        std::cout << std::endl;
+        return;
+    }
+    
+    // Handle stdout redirection (> and 1>)
+    if (stdout_redirect_pos != std::string::npos) {
+        std::string input_part = trimmed_arg.substr(0, stdout_redirect_pos);
+        std::string output_part = trimmed_arg.substr(stdout_redirect_pos + stdout_redirect_symbol.length());
         
         input_part = removeExtraSpaces(input_part);
         output_part = removeExtraSpaces(output_part);
@@ -257,10 +331,13 @@ void executeCd(const std::string& arg) {
 void executeCat(const std::string& arg) {
     std::string trimmed_arg = removeExtraSpaces(arg);
     
-    size_t redirect_pos = std::string::npos;
-    std::string redirect_symbol;
+    size_t stdout_redirect_pos = std::string::npos;
+    size_t stderr_redirect_pos = std::string::npos;
+    std::string stdout_redirect_symbol;
+    std::string stderr_redirect_symbol;
     
-    std::vector<std::pair<std::string, size_t>> redirects = {
+    // Check for stdout redirection
+    std::vector<std::pair<std::string, size_t>> stdout_redirects = {
         {" 1> ", trimmed_arg.find(" 1> ")},
         {"1> ", trimmed_arg.find("1> ")},
         {" 1>", trimmed_arg.find(" 1>")},
@@ -271,58 +348,149 @@ void executeCat(const std::string& arg) {
         {">", trimmed_arg.find(">")}
     };
     
-    for (const auto& [symbol, pos] : redirects) {
-        if (pos != std::string::npos && (redirect_pos == std::string::npos || pos < redirect_pos)) {
-            redirect_pos = pos;
-            redirect_symbol = symbol;
+    // Check for stderr redirection
+    std::vector<std::pair<std::string, size_t>> stderr_redirects = {
+        {" 2> ", trimmed_arg.find(" 2> ")},
+        {"2> ", trimmed_arg.find("2> ")},
+        {" 2>", trimmed_arg.find(" 2>")},
+        {"2>", trimmed_arg.find("2>")}
+    };
+    
+    // Find stdout redirections
+    for (const auto& [symbol, pos] : stdout_redirects) {
+        if (pos != std::string::npos && (stdout_redirect_pos == std::string::npos || pos < stdout_redirect_pos)) {
+            stdout_redirect_pos = pos;
+            stdout_redirect_symbol = symbol;
+        }
+    }
+    
+    // Find stderr redirections
+    for (const auto& [symbol, pos] : stderr_redirects) {
+        if (pos != std::string::npos && (stderr_redirect_pos == std::string::npos || pos < stderr_redirect_pos)) {
+            stderr_redirect_pos = pos;
+            stderr_redirect_symbol = symbol;
         }
     }
     
     std::string input_part = trimmed_arg;
-    std::string output_file;
-    bool has_redirection = false;
+    std::string stdout_output_file;
+    std::string stderr_output_file;
+    bool has_stdout_redirection = false;
+    bool has_stderr_redirection = false;
     
-    if (redirect_pos != std::string::npos) {
-        // Handle output redirection
-        input_part = trimmed_arg.substr(0, redirect_pos);
-        std::string output_part = trimmed_arg.substr(redirect_pos + redirect_symbol.length());
+    // Handle stderr redirection first (if it comes before stdout redirection)
+    if (stderr_redirect_pos != std::string::npos && 
+        (stdout_redirect_pos == std::string::npos || stderr_redirect_pos < stdout_redirect_pos)) {
+        
+        input_part = trimmed_arg.substr(0, stderr_redirect_pos);
+        std::string remaining_part = trimmed_arg.substr(stderr_redirect_pos + stderr_redirect_symbol.length());
         
         input_part = removeExtraSpaces(input_part);
-        output_part = removeExtraSpaces(output_part);
+        remaining_part = removeExtraSpaces(remaining_part);
         
-        if (output_part.empty()) {
-            std::cout << "cat: missing output file" << std::endl;
-            return;
+        // Check if there's stdout redirection after stderr redirection
+        size_t next_stdout_pos = std::string::npos;
+        std::string next_stdout_symbol;
+        
+        for (const auto& [symbol, pos] : stdout_redirects) {
+            size_t actual_pos = remaining_part.find(symbol);
+            if (actual_pos != std::string::npos && (next_stdout_pos == std::string::npos || actual_pos < next_stdout_pos)) {
+                next_stdout_pos = actual_pos;
+                next_stdout_symbol = symbol;
+            }
         }
         
-        output_file = output_part;
-        has_redirection = true;
+        if (next_stdout_pos != std::string::npos) {
+            stderr_output_file = removeExtraSpaces(remaining_part.substr(0, next_stdout_pos));
+            stdout_output_file = removeExtraSpaces(remaining_part.substr(next_stdout_pos + next_stdout_symbol.length()));
+            has_stdout_redirection = true;
+        } else {
+            stderr_output_file = remaining_part;
+        }
+        has_stderr_redirection = true;
+    }
+    // Handle stdout redirection first (if it comes before stderr redirection)
+    else if (stdout_redirect_pos != std::string::npos) {
+        input_part = trimmed_arg.substr(0, stdout_redirect_pos);
+        std::string remaining_part = trimmed_arg.substr(stdout_redirect_pos + stdout_redirect_symbol.length());
+        
+        input_part = removeExtraSpaces(input_part);
+        remaining_part = removeExtraSpaces(remaining_part);
+        
+        // Check if there's stderr redirection after stdout redirection
+        size_t next_stderr_pos = std::string::npos;
+        std::string next_stderr_symbol;
+        
+        for (const auto& [symbol, pos] : stderr_redirects) {
+            size_t actual_pos = remaining_part.find(symbol);
+            if (actual_pos != std::string::npos && (next_stderr_pos == std::string::npos || actual_pos < next_stderr_pos)) {
+                next_stderr_pos = actual_pos;
+                next_stderr_symbol = symbol;
+            }
+        }
+        
+        if (next_stderr_pos != std::string::npos) {
+            stdout_output_file = removeExtraSpaces(remaining_part.substr(0, next_stderr_pos));
+            stderr_output_file = removeExtraSpaces(remaining_part.substr(next_stderr_pos + next_stderr_symbol.length()));
+            has_stderr_redirection = true;
+        } else {
+            stdout_output_file = remaining_part;
+        }
+        has_stdout_redirection = true;
+    }
+    
+    if ((has_stdout_redirection && stdout_output_file.empty()) || 
+        (has_stderr_redirection && stderr_output_file.empty())) {
+        std::cout << "cat: missing output file" << std::endl;
+        return;
     }
     
     std::vector<std::string> files = parseArgs(input_part);
     
-    std::ofstream file_stream;
+    // Setup output streams
+    std::ofstream stdout_file_stream;
+    std::ofstream stderr_file_stream;
     std::ostream* output_stream = &std::cout;
+    std::ostream* error_stream = &std::cerr;
     
-    if (has_redirection) {
+    if (has_stdout_redirection) {
         namespace fs = std::filesystem;
         fs::path outFile;
         
-        if (fs::path(output_file).is_absolute()) {
-            outFile = output_file;
+        if (fs::path(stdout_output_file).is_absolute()) {
+            outFile = stdout_output_file;
         } else {
-            outFile = fs::current_path() / output_file;
+            outFile = fs::current_path() / stdout_output_file;
         }
         
         fs::create_directories(outFile.parent_path());
         
-        file_stream.open(outFile);
-        if (!file_stream) {
-            std::cerr << "cat: Failed to open file " << output_file << " for writing\n";
+        stdout_file_stream.open(outFile);
+        if (!stdout_file_stream) {
+            std::cerr << "cat: Failed to open file " << stdout_output_file << " for writing\n";
             return;
         }
-        output_stream = &file_stream;
+        output_stream = &stdout_file_stream;
+    }
+    
+    if (has_stderr_redirection) {
+        namespace fs = std::filesystem;
+        fs::path stderr_outFile;
         
+        if (fs::path(stderr_output_file).is_absolute()) {
+            stderr_outFile = stderr_output_file;
+        } else {
+            stderr_outFile = fs::current_path() / stderr_output_file;
+        }
+        
+        fs::create_directories(stderr_outFile.parent_path());
+        
+        stderr_file_stream.open(stderr_outFile);
+        if (!stderr_file_stream) {
+            std::cerr << "cat: Failed to open file " << stderr_output_file << " for writing\n";
+            return;
+        }
+        error_stream = &stderr_file_stream;
     }
     
     bool first_file = true;
@@ -332,7 +500,7 @@ void executeCat(const std::string& arg) {
     for (const auto& filename : files) {
         std::ifstream input_file(filename);
         if (!input_file.is_open()) {
-            std::cerr << "cat: " << filename << ": No such file or directory" << std::endl;
+            *error_stream << "cat: " << filename << ": No such file or directory" << std::endl;
             has_error = true;
             continue;
         }
@@ -347,8 +515,12 @@ void executeCat(const std::string& arg) {
         first_file = false;
     }
     
-    if (has_redirection) {
-        file_stream.close();
+    if (has_stdout_redirection) {
+        stdout_file_stream.close();
+    }
+    
+    if (has_stderr_redirection) {
+        stderr_file_stream.close();
     }
 }
 
@@ -357,6 +529,32 @@ void executeLs(std::string& arg) {
     
     arg = removeExtraSpaces(arg);
     
+    // Check for stderr redirection (2>)
+    size_t stderr_redirect_pos = std::string::npos;
+    std::string stderr_output_file;
+    bool has_stderr_redirect = false;
+    
+    // Look for 2> redirection
+    std::vector<std::pair<std::string, size_t>> stderr_redirects = {
+        {" 2> ", arg.find(" 2> ")},
+        {"2> ", arg.find("2> ")},
+        {" 2>", arg.find(" 2>")},
+        {"2>", arg.find("2>")}
+    };
+    
+    for (const auto& [symbol, pos] : stderr_redirects) {
+        if (pos != std::string::npos && (stderr_redirect_pos == std::string::npos || pos < stderr_redirect_pos)) {
+            stderr_redirect_pos = pos;
+            std::string stderr_part = arg.substr(pos + symbol.length());
+            stderr_output_file = removeExtraSpaces(stderr_part);
+            has_stderr_redirect = true;
+            // Remove the stderr redirection from the argument
+            arg = arg.substr(0, pos);
+            break;
+        }
+    }
+    
+    // Now handle stdout redirection (>) as before
     std::vector<std::string> parts = split(arg, '>');
     
     std::string inputArgs;
@@ -368,14 +566,29 @@ void executeLs(std::string& arg) {
         inputArgs = removeExtraSpaces(parts[0]);
         outputPath = removeExtraSpaces(parts[1]);
     } else {
-        std::cout << "ls: too many arguments" << std::endl;
+        if (has_stderr_redirect) {
+            fs::path stderr_outFile;
+            if (fs::path(stderr_output_file).is_absolute()) {
+                stderr_outFile = stderr_output_file;
+            } else {
+                stderr_outFile = fs::current_path() / stderr_output_file;
+            }
+            fs::create_directories(stderr_outFile.parent_path());
+            std::ofstream stderr_file(stderr_outFile);
+            if (stderr_file) {
+                stderr_file << "ls: too many arguments" << std::endl;
+                stderr_file.close();
+            }
+        } else {
+            std::cerr << "ls: too many arguments" << std::endl;
+        }
         return;
     }
     
     std::vector<std::string> tokens = parseArgs(inputArgs);
     
     bool listVertical = false;
-    std::string targetPath = "."; // default to current directory
+    std::string targetPath = "."; 
     
     for (const auto& token : tokens) {
         if (token == "-1") {
@@ -392,29 +605,48 @@ void executeLs(std::string& arg) {
         dirPath = fs::current_path() / targetPath;
     }
     
-    // Check if path exists
+    // Setup stderr redirection if needed
+    std::ofstream stderr_file;
+    std::ostream* error_stream = &std::cerr;
+    
+    if (has_stderr_redirect) {
+        fs::path stderr_outFile;
+        if (fs::path(stderr_output_file).is_absolute()) {
+            stderr_outFile = stderr_output_file;
+        } else {
+            stderr_outFile = fs::current_path() / stderr_output_file;
+        }
+        fs::create_directories(stderr_outFile.parent_path());
+        stderr_file.open(stderr_outFile);
+        if (stderr_file) {
+            error_stream = &stderr_file;
+        }
+    }
+    
     if (!fs::exists(dirPath)) {
-        std::cout << "ls: " << targetPath << ": No such file or directory" << std::endl;
+        *error_stream << "ls: " << targetPath << ": No such file or directory" << std::endl;
+        if (has_stderr_redirect) {
+            stderr_file.close();
+        }
         return;
     }
     
-    // Collect directory entries
     std::vector<std::string> entries;
     try {
         for (const auto& entry : fs::directory_iterator(dirPath)) {
             entries.push_back(entry.path().filename().string());
         }
     } catch (const std::exception& e) {
-        std::cout << "ls: " << targetPath << ": Permission denied" << std::endl;
+        *error_stream << "ls: " << targetPath << ": Permission denied" << std::endl;
+        if (has_stderr_redirect) {
+            stderr_file.close();
+        }
         return;
     }
     
-    // Sort entries (ls typically sorts alphabetically)
     std::sort(entries.begin(), entries.end());
     
-    // Output the results
     if (outputPath.empty()) {
-        // Output to stdout
         if (listVertical) {
             for (const auto& entry : entries) {
                 std::cout << entry << "\n";
@@ -427,7 +659,6 @@ void executeLs(std::string& arg) {
             if (!entries.empty()) std::cout << "\n";
         }
     } else {
-        // Output to file
         fs::path outFile;
         if (fs::path(outputPath).is_absolute()) {
             outFile = outputPath;
@@ -435,12 +666,14 @@ void executeLs(std::string& arg) {
             outFile = fs::current_path() / outputPath;
         }
         
-        // Create directories if they don't exist
         fs::create_directories(outFile.parent_path());
         
         std::ofstream file(outFile);
         if (!file) {
-            std::cerr << "ls: Failed to open file " << outputPath << " for writing\n";
+            *error_stream << "ls: Failed to open file " << outputPath << " for writing\n";
+            if (has_stderr_redirect) {
+                stderr_file.close();
+            }
             return;
         }
         
@@ -449,5 +682,9 @@ void executeLs(std::string& arg) {
         }
         
         file.close();
+    }
+    
+    if (has_stderr_redirect) {
+        stderr_file.close();
     }
 }
