@@ -348,7 +348,6 @@ void executeCat(const std::string& arg) {
         {">", trimmed_arg.find(">")}
     };
     
-    // Check for stderr redirection
     std::vector<std::pair<std::string, size_t>> stderr_redirects = {
         {" 2> ", trimmed_arg.find(" 2> ")},
         {"2> ", trimmed_arg.find("2> ")},
@@ -356,7 +355,6 @@ void executeCat(const std::string& arg) {
         {"2>", trimmed_arg.find("2>")}
     };
     
-    // Find stdout redirections
     for (const auto& [symbol, pos] : stdout_redirects) {
         if (pos != std::string::npos && (stdout_redirect_pos == std::string::npos || pos < stdout_redirect_pos)) {
             stdout_redirect_pos = pos;
@@ -364,7 +362,6 @@ void executeCat(const std::string& arg) {
         }
     }
     
-    // Find stderr redirections
     for (const auto& [symbol, pos] : stderr_redirects) {
         if (pos != std::string::npos && (stderr_redirect_pos == std::string::npos || pos < stderr_redirect_pos)) {
             stderr_redirect_pos = pos;
@@ -378,7 +375,6 @@ void executeCat(const std::string& arg) {
     bool has_stdout_redirection = false;
     bool has_stderr_redirection = false;
     
-    // Handle stderr redirection first (if it comes before stdout redirection)
     if (stderr_redirect_pos != std::string::npos && 
         (stdout_redirect_pos == std::string::npos || stderr_redirect_pos < stdout_redirect_pos)) {
         
@@ -388,7 +384,6 @@ void executeCat(const std::string& arg) {
         input_part = removeExtraSpaces(input_part);
         remaining_part = removeExtraSpaces(remaining_part);
         
-        // Check if there's stdout redirection after stderr redirection
         size_t next_stdout_pos = std::string::npos;
         std::string next_stdout_symbol;
         
@@ -409,7 +404,7 @@ void executeCat(const std::string& arg) {
         }
         has_stderr_redirection = true;
     }
-    // Handle stdout redirection first (if it comes before stderr redirection)
+
     else if (stdout_redirect_pos != std::string::npos) {
         input_part = trimmed_arg.substr(0, stdout_redirect_pos);
         std::string remaining_part = trimmed_arg.substr(stdout_redirect_pos + stdout_redirect_symbol.length());
@@ -417,7 +412,6 @@ void executeCat(const std::string& arg) {
         input_part = removeExtraSpaces(input_part);
         remaining_part = removeExtraSpaces(remaining_part);
         
-        // Check if there's stderr redirection after stdout redirection
         size_t next_stderr_pos = std::string::npos;
         std::string next_stderr_symbol;
         
@@ -447,7 +441,6 @@ void executeCat(const std::string& arg) {
     
     std::vector<std::string> files = parseArgs(input_part);
     
-    // Setup output streams
     std::ofstream stdout_file_stream;
     std::ofstream stderr_file_stream;
     std::ostream* output_stream = &std::cout;
@@ -529,12 +522,10 @@ void executeLs(std::string& arg) {
     
     arg = removeExtraSpaces(arg);
     
-    // Check for stderr redirection (2>)
     size_t stderr_redirect_pos = std::string::npos;
     std::string stderr_output_file;
     bool has_stderr_redirect = false;
     
-    // Look for 2> redirection
     std::vector<std::pair<std::string, size_t>> stderr_redirects = {
         {" 2> ", arg.find(" 2> ")},
         {"2> ", arg.find("2> ")},
@@ -548,13 +539,11 @@ void executeLs(std::string& arg) {
             std::string stderr_part = arg.substr(pos + symbol.length());
             stderr_output_file = removeExtraSpaces(stderr_part);
             has_stderr_redirect = true;
-            // Remove the stderr redirection from the argument
             arg = arg.substr(0, pos);
             break;
         }
     }
     
-    // Now handle stdout redirection (>) as before
     std::vector<std::string> parts = split(arg, '>');
     
     std::string inputArgs;
@@ -605,7 +594,6 @@ void executeLs(std::string& arg) {
         dirPath = fs::current_path() / targetPath;
     }
     
-    // Setup stderr redirection if needed
     std::ofstream stderr_file;
     std::ostream* error_stream = &std::cerr;
     
