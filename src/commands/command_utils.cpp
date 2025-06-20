@@ -180,12 +180,14 @@ void executeEcho(const std::string& arg) {
         return;
     }
 
+    // Check for output redirection (> and 1> for stdout, 2> for stderr, >> and 1>> for append)
     size_t stdout_redirect_pos = std::string::npos;
     size_t stderr_redirect_pos = std::string::npos;
     std::string stdout_redirect_symbol;
     std::string stderr_redirect_symbol;
     bool append_mode = false;
     
+    // Check for stdout redirection (> and 1> and >> and 1>>)
     std::vector<std::pair<std::string, size_t>> stdout_redirects = {
         {" 1>> ", trimmed_arg.find(" 1>> ")},
         {"1>> ", trimmed_arg.find("1>> ")},
@@ -205,31 +207,43 @@ void executeEcho(const std::string& arg) {
         {">", trimmed_arg.find(">")}
     };
     
+    // Check for stderr redirection (2> and 2>>)
     std::vector<std::pair<std::string, size_t>> stderr_redirects = {
+        {" 2>> ", trimmed_arg.find(" 2>> ")},
+        {"2>> ", trimmed_arg.find("2>> ")},
+        {" 2>>", trimmed_arg.find(" 2>>")},
+        {"2>>", trimmed_arg.find("2>>")},
         {" 2> ", trimmed_arg.find(" 2> ")},
         {"2> ", trimmed_arg.find("2> ")},
         {" 2>", trimmed_arg.find(" 2>")},
         {"2>", trimmed_arg.find("2>")}
     };
     
+    // Find stdout redirections
     for (const auto& [symbol, pos] : stdout_redirects) {
         if (pos != std::string::npos && (stdout_redirect_pos == std::string::npos || pos < stdout_redirect_pos)) {
             stdout_redirect_pos = pos;
             stdout_redirect_symbol = symbol;
+            // Check if it's append mode
             append_mode = (symbol.find(">>") != std::string::npos);
         }
     }
     
+    // Find stderr redirections
+    bool stderr_append_mode = false;
     for (const auto& [symbol, pos] : stderr_redirects) {
         if (pos != std::string::npos && (stderr_redirect_pos == std::string::npos || pos < stderr_redirect_pos)) {
             stderr_redirect_pos = pos;
             stderr_redirect_symbol = symbol;
+            stderr_append_mode = (symbol.find(">>") != std::string::npos);
         }
     }
     
+    // Handle stderr redirection (2>) - for echo, this should just create an empty file
     if (stderr_redirect_pos != std::string::npos && 
         (stdout_redirect_pos == std::string::npos || stderr_redirect_pos < stdout_redirect_pos)) {
         
+        // Extract the stderr output file
         std::string input_part = trimmed_arg.substr(0, stderr_redirect_pos);
         std::string stderr_output_part = trimmed_arg.substr(stderr_redirect_pos + stderr_redirect_symbol.length());
         
@@ -241,6 +255,7 @@ void executeEcho(const std::string& arg) {
             return;
         }
         
+        // Create empty stderr redirect file
         namespace fs = std::filesystem;
         fs::path stderr_outFile;
         
@@ -252,13 +267,20 @@ void executeEcho(const std::string& arg) {
         
         fs::create_directories(stderr_outFile.parent_path());
         
-        std::ofstream stderr_file(stderr_outFile);
+        std::ofstream stderr_file;
+        if (stderr_append_mode) {
+            stderr_file.open(stderr_outFile, std::ios::app);
+        } else {
+            stderr_file.open(stderr_outFile);
+        }
+        
         if (!stderr_file) {
             std::cerr << "echo: Failed to open file " << stderr_output_part << " for writing\n";
             return;
         }
-        stderr_file.close(); // Create empty file
+        stderr_file.close(); // Create empty file (or don't write anything for append)
         
+        // Continue with normal echo output to stdout using the remaining input
         std::vector<std::string> tokens = parseArgs(input_part);
         for (size_t i = 0; i < tokens.size(); ++i) {
             std::cout << tokens[i];
@@ -268,6 +290,7 @@ void executeEcho(const std::string& arg) {
         return;
     }
     
+    // Handle stdout redirection (>, 1>, >>, 1>>)
     if (stdout_redirect_pos != std::string::npos) {
         std::string input_part = trimmed_arg.substr(0, stdout_redirect_pos);
         std::string output_part = trimmed_arg.substr(stdout_redirect_pos + stdout_redirect_symbol.length());
@@ -280,14 +303,17 @@ void executeEcho(const std::string& arg) {
             return;
         }
         
+        // Parse the input text
         std::vector<std::string> tokens = parseArgs(input_part);
         
+        // Build the output content
         std::string content;
         for (size_t i = 0; i < tokens.size(); ++i) {
             content += tokens[i];
             if (i != tokens.size() - 1) content += " ";
         }
         
+        // Write to file
         namespace fs = std::filesystem;
         fs::path outFile;
         
@@ -297,6 +323,7 @@ void executeEcho(const std::string& arg) {
             outFile = fs::current_path() / output_part;
         }
         
+        // Create directories if they don't exist
         fs::create_directories(outFile.parent_path());
         
         std::ofstream file;
@@ -314,8 +341,10 @@ void executeEcho(const std::string& arg) {
         file << content << std::endl;
         file.close();
         
+        // Don't output anything to stdout when redirecting
         return;
     } else {
+        // No redirection, output to stdout
         std::vector<std::string> tokens = parseArgs(trimmed_arg);
         for (size_t i = 0; i < tokens.size(); ++i) {
             std::cout << tokens[i];
@@ -333,7 +362,9 @@ void executeCat(const std::string& arg) {
     std::string stdout_redirect_symbol;
     std::string stderr_redirect_symbol;
     bool stdout_append_mode = false;
+    bool stderr_append_mode = false;
     
+    // Check for stdout redirection (including append)
     std::vector<std::pair<std::string, size_t>> stdout_redirects = {
         {" 1>> ", trimmed_arg.find(" 1>> ")},
         {"1>> ", trimmed_arg.find("1>> ")},
@@ -354,6 +385,10 @@ void executeCat(const std::string& arg) {
     };
     
     std::vector<std::pair<std::string, size_t>> stderr_redirects = {
+        {" 2>> ", trimmed_arg.find(" 2>> ")},
+        {"2>> ", trimmed_arg.find("2>> ")},
+        {" 2>>", trimmed_arg.find(" 2>>")},
+        {"2>>", trimmed_arg.find("2>>")},
         {" 2> ", trimmed_arg.find(" 2> ")},
         {"2> ", trimmed_arg.find("2> ")},
         {" 2>", trimmed_arg.find(" 2>")},
@@ -372,6 +407,7 @@ void executeCat(const std::string& arg) {
         if (pos != std::string::npos && (stderr_redirect_pos == std::string::npos || pos < stderr_redirect_pos)) {
             stderr_redirect_pos = pos;
             stderr_redirect_symbol = symbol;
+            stderr_append_mode = (symbol.find(">>") != std::string::npos);
         }
     }
     
@@ -489,7 +525,12 @@ void executeCat(const std::string& arg) {
         
         fs::create_directories(stderr_outFile.parent_path());
         
-        stderr_file_stream.open(stderr_outFile);
+        if (stderr_append_mode) {
+            stderr_file_stream.open(stderr_outFile, std::ios::app);
+        } else {
+            stderr_file_stream.open(stderr_outFile);
+        }
+        
         if (!stderr_file_stream) {
             std::cerr << "cat: Failed to open file " << stderr_output_file << " for writing\n";
             return;
@@ -528,22 +569,6 @@ void executeCat(const std::string& arg) {
     }
 }
 
-std::vector<std::string> split(const std::string& str, const std::string& delimiter, int max_splits = -1) {
-    std::vector<std::string> tokens;
-    size_t start = 0;
-    size_t end = 0;
-    int splits = 0;
-    
-    while ((end = str.find(delimiter, start)) != std::string::npos && (max_splits == -1 || splits < max_splits)) {
-        tokens.push_back(str.substr(start, end - start));
-        start = end + delimiter.length();
-        splits++;
-    }
-    tokens.push_back(str.substr(start));
-    
-    return tokens;
-}
-
 void executeLs(std::string& arg) {
     namespace fs = std::filesystem;
     
@@ -552,8 +577,13 @@ void executeLs(std::string& arg) {
     size_t stderr_redirect_pos = std::string::npos;
     std::string stderr_output_file;
     bool has_stderr_redirect = false;
+    bool stderr_append_mode = false;
     
     std::vector<std::pair<std::string, size_t>> stderr_redirects = {
+        {" 2>> ", arg.find(" 2>> ")},
+        {"2>> ", arg.find("2>> ")},
+        {" 2>>", arg.find(" 2>>")},
+        {"2>>", arg.find("2>>")},
         {" 2> ", arg.find(" 2> ")},
         {"2> ", arg.find("2> ")},
         {" 2>", arg.find(" 2>")},
@@ -566,11 +596,13 @@ void executeLs(std::string& arg) {
             std::string stderr_part = arg.substr(pos + symbol.length());
             stderr_output_file = removeExtraSpaces(stderr_part);
             has_stderr_redirect = true;
+            stderr_append_mode = (symbol.find(">>") != std::string::npos);
             arg = arg.substr(0, pos);
             break;
         }
     }
     
+    // Check for append redirection first
     std::vector<std::string> append_parts = split(arg, ">>", 2);
     bool append_mode = false;
     std::vector<std::string> parts;
@@ -579,7 +611,7 @@ void executeLs(std::string& arg) {
         parts = append_parts;
         append_mode = true;
     } else {
-        parts = split(arg, ">", 2);
+        parts = split(arg, '>', 2);
         append_mode = false;
     }
     
@@ -600,7 +632,12 @@ void executeLs(std::string& arg) {
                 stderr_outFile = fs::current_path() / stderr_output_file;
             }
             fs::create_directories(stderr_outFile.parent_path());
-            std::ofstream stderr_file(stderr_outFile);
+            std::ofstream stderr_file;
+            if (stderr_append_mode) {
+                stderr_file.open(stderr_outFile, std::ios::app);
+            } else {
+                stderr_file.open(stderr_outFile);
+            }
             if (stderr_file) {
                 stderr_file << "ls: too many arguments" << std::endl;
                 stderr_file.close();
@@ -642,7 +679,11 @@ void executeLs(std::string& arg) {
             stderr_outFile = fs::current_path() / stderr_output_file;
         }
         fs::create_directories(stderr_outFile.parent_path());
-        stderr_file.open(stderr_outFile);
+        if (stderr_append_mode) {
+            stderr_file.open(stderr_outFile, std::ios::app);
+        } else {
+            stderr_file.open(stderr_outFile);
+        }
         if (stderr_file) {
             error_stream = &stderr_file;
         }
@@ -718,4 +759,21 @@ void executeLs(std::string& arg) {
     if (has_stderr_redirect) {
         stderr_file.close();
     }
+}
+
+// Helper function for splitting with string delimiter (needed for ls function)
+std::vector<std::string> split(const std::string& str, const std::string& delimiter, int max_splits = -1) {
+    std::vector<std::string> tokens;
+    size_t start = 0;
+    size_t end = 0;
+    int splits = 0;
+    
+    while ((end = str.find(delimiter, start)) != std::string::npos && (max_splits == -1 || splits < max_splits)) {
+        tokens.push_back(str.substr(start, end - start));
+        start = end + delimiter.length();
+        splits++;
+    }
+    tokens.push_back(str.substr(start));
+    
+    return tokens;
 }
