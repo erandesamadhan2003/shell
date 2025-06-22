@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <sys/types.h> 
 #include <algorithm>
 
 std::vector<std::string> parseArgs(const std::string& input) {

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <dirent.h>
+#include <unistd.h>
 
 std::string removeExtraSpaces(std::string s) {
     size_t start = s.find_first_not_of(" \t");
@@ -91,3 +93,41 @@ std::string findInPath(const std::string& cmd) {
     return "";
 }
 
+std::vector<std::string> splitPath(const std::string& pathEnv) {
+    std::vector<std::string> paths;
+    std::stringstream ss(pathEnv);
+    std::string dir;
+    while (std::getline(ss, dir, ':')) {
+        paths.push_back(dir);
+    }
+    return paths;
+}
+
+bool isExecutable(const std::string& path) {
+    return access(path.c_str(), X_OK) == 0;
+}
+
+
+std::optional<std::string> findExecutableMatch(const std::string& partialCmd) {
+    std::string pathEnv = getenv("PATH");
+    auto dirs = splitPath(pathEnv);
+
+    for (const auto& dir : dirs) {
+        DIR* dp = opendir(dir.c_str());
+        if (!dp) continue;
+
+        struct dirent* entry;
+        while ((entry = readdir(dp)) != nullptr) {
+            std::string fileName(entry->d_name);
+            if (fileName.rfind(partialCmd, 0) == 0) { 
+                std::string fullPath = dir + "/" + fileName;
+                if (isExecutable(fullPath)) {
+                    closedir(dp);
+                    return fileName;
+                }
+            }
+        }
+        closedir(dp);
+    }
+    return std::nullopt;
+}

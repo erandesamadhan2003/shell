@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <readline/readline.h>
 #include <readline/history.h>
-
+#include <algorithm>
 #include "./helper/helper_utils.h"
 #include "./commands/command_utils.h"
 
@@ -14,21 +14,62 @@ std::vector<std::string> commandList = {
     "echo", "exit", "type", "pwd", "cd", "cat", "ls"
 };
 
+#include <dirent.h> // for DIR and readdir
+
+std::vector<std::string> getExecutablesInPath() {
+    std::vector<std::string> executables;
+    const char* pathEnv = getenv("PATH");
+    if (!pathEnv) return executables;
+
+    std::stringstream ss(pathEnv);
+    std::string dir;
+
+    while (std::getline(ss, dir, ':')) {
+        DIR* dp = opendir(dir.c_str());
+        if (!dp) continue;
+
+        dirent* entry;
+        while ((entry = readdir(dp)) != nullptr) {
+            std::string fileName(entry->d_name);
+            std::string fullPath = dir + "/" + fileName;
+
+            if (access(fullPath.c_str(), X_OK) == 0) {
+                executables.push_back(fileName);
+            }
+        }
+
+        closedir(dp);
+    }
+
+    return executables;
+}
+
+
 char* commandGenerator(const char* text, int state) {
+    static std::vector<std::string> allCommands;
     static size_t list_index;
     static size_t len;
-    
+
     if (state == 0) {
         list_index = 0;
         len = strlen(text);
+
+        allCommands = commandList;
+
+        std::vector<std::string> pathCommands = getExecutablesInPath();
+        allCommands.insert(allCommands.end(), pathCommands.begin(), pathCommands.end());
+
+        std::sort(allCommands.begin(), allCommands.end());
+        allCommands.erase(std::unique(allCommands.begin(), allCommands.end()), allCommands.end());
     }
 
-    while (list_index < commandList.size()) {
-        const std::string& cmd = commandList[list_index++];
+    while (list_index < allCommands.size()) {
+        const std::string& cmd = allCommands[list_index++];
         if (cmd.compare(0, len, text) == 0) {
             return strdup(cmd.c_str());
         }
     }
+
     return nullptr;
 }
 
@@ -50,7 +91,7 @@ int main() {
         if (!input_cstr) break;
 
         std::string input(input_cstr);
-        free(input_cstr); // clean up
+        free(input_cstr); 
 
         if (!input.empty()) add_history(input.c_str());
 

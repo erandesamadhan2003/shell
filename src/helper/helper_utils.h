@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <optional>
 
 
 enum CommandType{ CMD_ECHO, CMD_TYPE, CMD_EXIT, CMD_UNKNOWN, CMD_PWD, CMD_CD, CMD_CAT, CMD_LS };
@@ -21,5 +22,7 @@ bool isExcutable(const std::filesystem::path& path);
 // search command in path directories
 std::string findInPath(const std::string& cmd);
 
-#endif
+//
+std::optional<std::string> findExecutableMatch(const std::string& partialCmd);
 
+#endif
