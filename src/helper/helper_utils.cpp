@@ -7,6 +7,23 @@
 #include <dirent.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cctype>
+
+std::string trim(const std::string& str) {
+    auto start = str.begin();
+    while (start != str.end() && std::isspace(*start)) {
+        start++;
+    }
+
+    auto end = str.end();
+    do {
+        end--;
+    } while (std::distance(start, end) > 0 && std::isspace(*end));
+
+    return std::string(start, end + 1);
+}
+
 std::string removeExtraSpaces(std::string s) {
     size_t start = s.find_first_not_of(" \t");
     return (start == std::string::npos) ? "" : s.substr(start);
@@ -54,6 +71,11 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
         return CMD_LS;
     }
 
+    if(trimmed.rfind("wc ", 0) == 0) {
+        arg = removeExtraSpaces(trimmed.substr(3));
+        return CMD_WC;
+    }
+
     return CMD_UNKNOWN;
 }
 
@@ -70,9 +92,9 @@ std::vector<std::string> split(const std::string& s, char delim) {
 }
 
 bool isExcutable (const std::filesystem::path& path) {
-    std::error_code error; // is an object which handle errors silently withour crashing the program
+    std::error_code error; 
     if(!std::filesystem::exists(path, error)) return false;
-    if(!std::filesystem::is_regular_file(path, error)) return false;  // check the whether the path is normal path or not(isfolder or symbolic path)
+    if(!std::filesystem::is_regular_file(path, error)) return false;  
     return true;
 }
 
@@ -80,7 +102,7 @@ std::string findInPath(const std::string& cmd) {
     const char* path_env = getenv("PATH");
     if(!path_env) return "";
 
-    std::string path_str(path_env); // convert C style string to c++ string so that c++ operation can be done on command string
+    std::string path_str(path_env); 
     std::vector<std::string> dirs = split(path_str, ':');
 
     for(const std::string& dir : dirs) {
@@ -131,3 +153,4 @@ std::optional<std::string> findExecutableMatch(const std::string& partialCmd) {
     }
     return std::nullopt;
 }
+

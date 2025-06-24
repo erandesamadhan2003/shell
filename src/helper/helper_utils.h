@@ -6,7 +6,7 @@
 #include <optional>
 
 
-enum CommandType{ CMD_ECHO, CMD_TYPE, CMD_EXIT, CMD_UNKNOWN, CMD_PWD, CMD_CD, CMD_CAT, CMD_LS };
+enum CommandType{ CMD_ECHO, CMD_TYPE, CMD_EXIT, CMD_UNKNOWN, CMD_PWD, CMD_CD, CMD_CAT, CMD_LS, CMD_WC };
 // remove the extra spaces in the input at start of the string
 std::string removeExtraSpaces(std::string s);
 
@@ -24,5 +24,7 @@ std::string findInPath(const std::string& cmd);
 
 //
 std::optional<std::string> findExecutableMatch(const std::string& partialCmd);
+
+std::string trim(const std::string& str);
 
 #endif

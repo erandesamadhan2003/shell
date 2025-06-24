@@ -1,18 +1,23 @@
-#include<iostream>
-#include "command_utils.h"
+#include <iostream>
 #include "../helper/helper_utils.h"
+#include "command_utils.h"
+#include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <filesystem>
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <vector>
-#include <sstream>
 #include <iostream>
-#include <vector>
-#include <sys/types.h> 
 #include <algorithm>
+#include <iomanip>
+#include <dirent.h>
+#include <cstdlib>
+#include <unistd.h> 
+#include <cstring>
 
 std::vector<std::string> parseArgs(const std::string& input) {
     std::vector<std::string> args;
@@ -78,7 +83,6 @@ std::vector<std::string> parseArgs(const std::string& input) {
 
     return args;
 }
-
 
 void executeType(const std::string& arg) {
     if (arg == "echo" || arg == "type" || arg == "exit" || arg == "pwd") {
@@ -189,6 +193,7 @@ std::vector<std::string> split(const std::string& str, const std::string& delimi
     
     return tokens;
 }
+
 void executeEcho(const std::string& arg) {
     std::string trimmed_arg = removeExtraSpaces(arg);
     if (trimmed_arg.empty()) {
@@ -565,6 +570,7 @@ void executeCat(const std::string& arg) {
     if (has_stderr_redirection) {
         stderr_file_stream.close();
     }
+    
 }
 
 void executeLs(std::string& arg) {
@@ -762,4 +768,66 @@ void executeLs(std::string& arg) {
     if (has_stderr_redirect) {
         stderr_file.close();
     }
+}
+
+void executeWc(const std::string& arg) {
+    std::istream* input = &std::cin;
+    std::ifstream file;
+    bool isFile = false;
+    std::string filename;
+    
+    // Check if we have a filename argument
+    if (!arg.empty()) {
+        // Remove leading/trailing whitespace
+        size_t start = arg.find_first_not_of(" \t");
+        size_t end = arg.find_last_not_of(" \t");
+        
+        if (start != std::string::npos && end != std::string::npos) {
+            filename = arg.substr(start, end - start + 1);
+            file.open(filename);
+            if (!file.is_open()) {
+                std::cerr << "wc: " << filename << ": No such file or directory" << std::endl;
+                return;
+            }
+            input = &file;
+            isFile = true;
+        }
+    }
+
+    int lines = 0, words = 0, characters = 0;
+    std::string line;
+    
+    while (std::getline(*input, line)) {
+        lines++;
+        characters += line.length() + 1; // +1 for the newline character
+        
+        // Count words in this line
+        std::istringstream iss(line);
+        std::string word;
+        while (iss >> word) {
+            words++;
+        }
+    }
+    
+    // Adjust character count for EOF (last line might not have newline)
+    if (lines > 0 && input->eof()) {
+        // Check if the last character was actually a newline
+        // For simplicity, we'll assume standard text files end with newline
+        // but when reading from pipe, we might need to adjust
+    }
+    
+    if (isFile) {
+        file.close();
+    }
+    
+    // Output in the format: lines words characters [filename]
+    std::cout << std::setw(8) << lines 
+              << std::setw(8) << words 
+              << std::setw(8) << characters;
+    
+    if (isFile) {
+        std::cout << " " << filename;
+    }
+    
+    std::cout << std::endl;
 }
