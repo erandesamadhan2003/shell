@@ -34,12 +34,10 @@ std::vector<std::string> getExecutablesInPath() {
         while ((entry = readdir(dp)) != nullptr) {
             std::string fileName(entry->d_name);
             
-            // Skip . and .. entries
             if (fileName == "." || fileName == "..") continue;
             
             std::string fullPath = dir + "/" + fileName;
 
-            // Check if file is executable
             if (access(fullPath.c_str(), X_OK) == 0) {
                 executables.push_back(fileName);
             }
@@ -51,27 +49,22 @@ std::vector<std::string> getExecutablesInPath() {
     return executables;
 }
 
-// Global variables for completion state
 static std::vector<std::string> allCommands;
 static std::vector<std::string> matches;
 static size_t match_index = 0;
 
 char* commandGenerator(const char* text, int state) {
     if (state == 0) {
-        // Initialize on first call
         match_index = 0;
         matches.clear();
         
-        // Get all available commands
         allCommands = commandList;
         std::vector<std::string> pathCommands = getExecutablesInPath();
         allCommands.insert(allCommands.end(), pathCommands.begin(), pathCommands.end());
         
-        // Remove duplicates and sort
         std::sort(allCommands.begin(), allCommands.end());
         allCommands.erase(std::unique(allCommands.begin(), allCommands.end()), allCommands.end());
         
-        // Find all matches for the given text
         std::string prefix(text);
         for (const auto& cmd : allCommands) {
             if (cmd.substr(0, prefix.length()) == prefix) {
@@ -80,7 +73,6 @@ char* commandGenerator(const char* text, int state) {
         }
     }
     
-    // Return next match
     if (match_index < matches.size()) {
         return strdup(matches[match_index++].c_str());
     }
@@ -88,22 +80,18 @@ char* commandGenerator(const char* text, int state) {
     return nullptr;
 }
 
-// Custom completion function that handles partial completion
 char** commandCompletion(const char* text, int start, int end) {
     rl_attempted_completion_over = 1;
     
-    // Get all matches
     char** matches = rl_completion_matches(text, commandGenerator);
     
     if (matches && matches[0] && matches[1]) {
-        // Multiple matches found - find common prefix
         std::string first(matches[1]);
         std::string common = first;
         
         for (int i = 2; matches[i] != nullptr; i++) {
             std::string current(matches[i]);
             
-            // Find common prefix between 'common' and 'current'
             size_t j = 0;
             while (j < common.length() && j < current.length() && 
                    common[j] == current[j]) {
@@ -112,7 +100,6 @@ char** commandCompletion(const char* text, int start, int end) {
             common = common.substr(0, j);
         }
         
-        // If we found a longer common prefix than what was typed, use it
         if (common.length() > strlen(text)) {
             free(matches[0]);
             matches[0] = strdup(common.c_str());
@@ -136,12 +123,10 @@ void executeTwoCommandPipeline(const std::string& cmd1, const std::string& cmd2)
     }
 
     if (pid1 == 0) {
-        // First child - execute first command
-        close(pipefd[0]); // Close read end
-        dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to pipe
+        close(pipefd[0]); 
+        dup2(pipefd[1], STDOUT_FILENO); 
         close(pipefd[1]);
 
-        // Parse and execute first command
         std::string arg;
         CommandType cmdType = getCommandType(cmd1, arg);
         
@@ -169,12 +154,10 @@ void executeTwoCommandPipeline(const std::string& cmd1, const std::string& cmd2)
     }
 
     if (pid2 == 0) {
-        // Second child - execute second command
-        close(pipefd[1]); // Close write end
-        dup2(pipefd[0], STDIN_FILENO); // Redirect stdin from pipe
+        close(pipefd[1]); 
+        dup2(pipefd[0], STDIN_FILENO);
         close(pipefd[0]);
 
-        // Parse and execute second command
         std::string arg;
         CommandType cmdType = getCommandType(cmd2, arg);
         
