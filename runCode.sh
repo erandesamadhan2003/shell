@@ -6,4 +6,5 @@ set -e
   cmake --build ./build
 )
 
+
 exec ./build/shell "$@"
