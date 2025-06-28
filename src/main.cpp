@@ -15,7 +15,7 @@
 #include "./commands/command_utils.h"
 
 std::vector<std::string> commandList = {
-    "echo", "exit", "type", "pwd", "cd", "cat", "ls", "wc"
+    "print", "exit", "type", "currdir", "cd", "cat", "ls", "wc"
 };
 
 std::vector<std::string> getExecutablesInPath() {
@@ -129,7 +129,7 @@ void executeTwoCommandPipeline(const std::string& cmd1, const std::string& cmd2)
 
         std::string arg;
         CommandType cmdType = getCommandType(cmd1, arg);
-        
+        std:: cout << cmdType << " : " << arg << std::endl;
         switch (cmdType) {
             case CMD_CAT:
                 executeCat(arg);
@@ -219,7 +219,7 @@ int main() {
     rl_attempted_completion_function = commandCompletion;
 
     while (true) {
-        char* input_cstr = readline("$ ");
+        char* input_cstr = readline("Terminal>> ");
         if (!input_cstr) break;
 
         std::string input(input_cstr);
@@ -278,6 +278,7 @@ int main() {
                     std::cout << "Unknown command: " << input << std::endl;
                     break;
             }
+            std::cout<<std::endl;
         }
     }
 

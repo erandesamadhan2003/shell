@@ -36,7 +36,7 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
         return CMD_EXIT;
     }
 
-    if (trimmed.rfind("echo ", 0) == 0) {
+    if (trimmed.rfind("print ", 0) == 0) {
         arg = trimmed.substr(5); 
         return CMD_ECHO;
     }
@@ -46,7 +46,7 @@ CommandType getCommandType(const std::string& input, std::string& arg) {
         return CMD_TYPE;
     }
 
-    if(trimmed == "pwd") {
+    if(trimmed == "currdir") {
         arg = "";
         return CMD_PWD;
     }

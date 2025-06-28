@@ -85,7 +85,7 @@ std::vector<std::string> parseArgs(const std::string& input) {
 }
 
 void executeType(const std::string& arg) {
-    if (arg == "echo" || arg == "type" || arg == "exit" || arg == "pwd") {
+    if (arg == "print" || arg == "type" || arg == "exit" || arg == "currdir") {
         std::cout << arg << " is a shell builtin" << std::endl;
     } else {
         std::string path_found = findInPath(arg);
@@ -264,7 +264,7 @@ void executeEcho(const std::string& arg) {
         stderr_output_part = removeExtraSpaces(stderr_output_part);
         
         if (stderr_output_part.empty()) {
-            std::cout << "echo: missing output file" << std::endl;
+            std::cout << "print: missing output file" << std::endl;
             return;
         }
         
@@ -287,7 +287,7 @@ void executeEcho(const std::string& arg) {
         }
         
         if (!stderr_file) {
-            std::cerr << "echo: Failed to open file " << stderr_output_part << " for writing\n";
+            std::cerr << "print: Failed to open file " << stderr_output_part << " for writing\n";
             return;
         }
         stderr_file.close(); // Create empty file (or don't write anything for append)
@@ -309,7 +309,7 @@ void executeEcho(const std::string& arg) {
         output_part = removeExtraSpaces(output_part);
         
         if (output_part.empty()) {
-            std::cout << "echo: missing output file" << std::endl;
+            std::cout << "print: missing output file" << std::endl;
             return;
         }
         
@@ -340,7 +340,7 @@ void executeEcho(const std::string& arg) {
         }
         
         if (!file) {
-            std::cerr << "echo: Failed to open file " << output_part << " for writing\n";
+            std::cerr << "print: Failed to open file " << output_part << " for writing\n";
             return;
         }
         
@@ -760,7 +760,7 @@ void executeLs(std::string& arg) {
             if (i != entries.size() - 1) *output_stream << "  ";
         }
         if (!entries.empty()) *output_stream << "\n";
-    }
+    }   
     
     if (!outputPath.empty()) {
         output_file.close();
